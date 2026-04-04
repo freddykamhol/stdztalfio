@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma } from "./prisma";
+import type { Stunde as StundeRow } from "@prisma/client";
+import { getPrismaClient } from "./prisma";
 import {
   buildMonatId,
   formatDatumUtc,
@@ -11,8 +12,6 @@ import {
   type StundenzettelMonat,
   type StundenzettelSummen,
 } from "./stundenzettel";
-
-type StundeRow = Awaited<ReturnType<typeof prisma.stunde.findMany>>[number];
 
 function mapEintrag(row: StundeRow): StundenzettelEintrag {
   return {
@@ -61,6 +60,7 @@ function buildMonat(jahr: number, monat: number, rows: StundeRow[]): Stundenzett
 }
 
 export async function getStundenzettelMonate() {
+  const prisma = getPrismaClient();
   const rows = await prisma.stunde.findMany({
     orderBy: [{ datum: "desc" }, { beginn: "desc" }],
   });
@@ -87,6 +87,7 @@ export async function getStundenzettelMonate() {
 }
 
 export async function getStundenzettelMonat(jahr: number, monat: number) {
+  const prisma = getPrismaClient();
   const start = new Date(Date.UTC(jahr, monat - 1, 1, 0, 0, 0));
   const ende = new Date(Date.UTC(jahr, monat, 1, 0, 0, 0));
 

@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 import { isStundenFormLinkTokenValid } from "../config/stunden-form-link";
-import { prisma } from "../lib/prisma";
+import { getPrismaClient } from "../lib/prisma";
 import { isStundenFormPasswordValid } from "../lib/site-auth";
 
 export type StundenFormState = {
@@ -229,6 +229,7 @@ export async function createStunde(
   _: StundenFormState,
   formData: FormData,
 ): Promise<StundenFormState> {
+  const prisma = getPrismaClient();
   const token = leseText(formData, "token");
 
   if (!isStundenFormLinkTokenValid(token)) {
@@ -286,6 +287,7 @@ export async function updateStunde(
   _: StundenFormState,
   formData: FormData,
 ): Promise<StundenFormState> {
+  const prisma = getPrismaClient();
   const { fehler: passwortFehler } = pruefeBearbeitungsPasswort(formData);
 
   if (passwortFehler) {
@@ -374,6 +376,7 @@ export async function deleteStunde(
   _: StundenFormState,
   formData: FormData,
 ): Promise<StundenFormState> {
+  const prisma = getPrismaClient();
   const { fehler: passwortFehler } = pruefeBearbeitungsPasswort(formData);
 
   if (passwortFehler) {
