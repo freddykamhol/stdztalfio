@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run db:generate",
+    "prebuild": "npm run clean:next-public && npm run db:generate",
     "build": "next build",
+    "clean:next-public": "node scripts/clear-public-next.mjs",
     "postbuild": "node scripts/copy-next-static.mjs",
     "start": "next start",
     "lint": "eslint",
