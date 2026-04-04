@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useEffectEvent, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   Clock3,
   ImageIcon,
@@ -100,27 +100,21 @@ export function StundeEditModal({
     deleteStunde,
     initialStundenFormState,
   );
-  const handleEditSuccess = useEffectEvent(() => {
-    router.refresh();
-    onClose();
-  });
-  const handleDeleteSuccess = useEffectEvent(() => {
-    onDeleted(eintrag.id);
-    router.refresh();
-    onClose();
-  });
 
   useEffect(() => {
     if (editState.status === "success") {
-      handleEditSuccess();
+      router.refresh();
+      onClose();
     }
-  }, [editState.status]);
+  }, [editState.status, onClose, router]);
 
   useEffect(() => {
     if (deleteState.status === "success") {
-      handleDeleteSuccess();
+      onDeleted(eintrag.id);
+      router.refresh();
+      onClose();
     }
-  }, [deleteState.status]);
+  }, [deleteState.status, eintrag.id, onClose, onDeleted, router]);
 
   const hasFormAccess = unlockState.unlocked === true;
   const stundenVorschau = berechneVorschau(values.beginn, values.ende, values.pauseDauer);
