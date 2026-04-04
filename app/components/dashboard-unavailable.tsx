@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AlertTriangle, Database, RefreshCw } from "lucide-react";
 
 type DashboardUnavailableProps = {
@@ -80,14 +79,16 @@ export function DashboardUnavailable({
             <div className="mt-2 text-2xl font-semibold text-white">Konfiguration prüfen</div>
             <p className="mt-2 text-sm leading-6 text-zinc-400">{hint}</p>
 
-            <div className="mt-6 flex flex-col gap-3">
-              <Link
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#E20613] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b5050f]"
-                href="/"
-              >
-                <RefreshCw size={16} />
-                Erneut laden
-              </Link>
+          <div className="mt-6 flex flex-col gap-3">
+              <form action="/" method="get">
+                <button
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#E20613] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b5050f]"
+                  type="submit"
+                >
+                  <RefreshCw size={16} />
+                  Erneut laden
+                </button>
+              </form>
 
               {technicalDetail ? (
                 <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-3">

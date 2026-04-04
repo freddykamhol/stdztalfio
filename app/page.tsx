@@ -1,3 +1,6 @@
+import { AccessGate } from "./components/access-gate";
+import { DashboardUnavailable } from "./components/dashboard-unavailable";
+import { StundenzettelDashboard } from "./components/stundenzettel-dashboard";
 import { hasSiteAccess } from "./lib/site-auth";
 import { getStundenzettelMonate } from "./lib/stundenzettel-data";
 
@@ -58,20 +61,22 @@ export default async function HomePage() {
   const hasAccess = await hasSiteAccess();
 
   if (!hasAccess) {
-    const { AccessGate } = await import("./components/access-gate");
     return <AccessGate />;
   }
 
-  try {
-    const monate = await getStundenzettelMonate();
-    const { StundenzettelDashboard } = await import("./components/stundenzettel-dashboard");
+  let monate: Awaited<ReturnType<typeof getStundenzettelMonate>> = [];
+  let problem: ReturnType<typeof getDashboardProblem> | null = null;
 
-    return <StundenzettelDashboard monate={monate} />;
+  try {
+    monate = await getStundenzettelMonate();
   } catch (error) {
     console.error("Dashboard konnte nach Freischaltung nicht geladen werden.", error);
-    const { DashboardUnavailable } = await import("./components/dashboard-unavailable");
-    const problem = getDashboardProblem(error);
+    problem = getDashboardProblem(error);
+  }
 
+  if (problem) {
     return <DashboardUnavailable {...problem} />;
   }
+
+  return <StundenzettelDashboard monate={monate} />;
 }
