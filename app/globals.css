@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+:root {
+  --background: 248 249 251;
+  --foreground: 17 24 39;
+  --card: 255 255 255;
+  --card-foreground: 17 24 39;
+  --muted: 243 244 246;
+  --muted-foreground: 107 114 128;
+  --border: 229 231 235;
+}
+
+.dark {
+  --background: 13 13 13;
+  --foreground: 244 244 245;
+  --card: 20 20 20;
+  --card-foreground: 244 244 245;
+  --muted: 39 39 42;
+  --muted-foreground: 161 161 170;
+  --border: 63 63 70;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
