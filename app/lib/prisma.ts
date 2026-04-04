@@ -2,6 +2,7 @@ import "server-only";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import "./load-env";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -12,7 +13,9 @@ function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL fehlt. Prüfe deine "./.env" im Projekt-Root.');
+    throw new Error(
+      'DATABASE_URL fehlt. Lege sie in der Server-Umgebung oder in "./.env" im Projekt-Root an.',
+    );
   }
 
   const pool =

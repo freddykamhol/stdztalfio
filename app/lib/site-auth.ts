@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import "./load-env";
 
 export const SITE_ACCESS_COOKIE = "stundenalfio_access";
 
