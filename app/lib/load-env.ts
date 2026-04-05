@@ -1,5 +1,7 @@
 import "server-only";
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
+
+const { loadEnvConfig } = nextEnv;
 
 const globalForEnv = globalThis as typeof globalThis & {
   stundenalfioEnvLoaded?: boolean;

@@ -1,7 +1,9 @@
 import { createServer } from "node:http";
 import { parse } from "node:url";
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
 import next from "next";
+
+const { loadEnvConfig } = nextEnv;
 
 loadEnvConfig(process.cwd());
 
@@ -16,6 +18,19 @@ const app = next({
 });
 
 const handle = app.getRequestHandler();
+
+function requireServerEnv(name) {
+  const value = process.env[name]?.trim();
+
+  if (!value) {
+    throw new Error(`${name} fehlt. Lege die Variable vor dem Start in der Runtime an.`);
+  }
+}
+
+requireServerEnv("DATABASE_URL");
+requireServerEnv("SITE_PASSWORD");
+requireServerEnv("STUNDEN_FORM_PASSWORD");
+requireServerEnv("STUNDEN_FORM_LINK_TOKEN");
 
 app
   .prepare()

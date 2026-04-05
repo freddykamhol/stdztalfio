@@ -1,19 +1,11 @@
 import "server-only";
 import { cookies } from "next/headers";
-import "./load-env";
+import { getSitePassword, getStundenFormPassword } from "./env";
 
 export const SITE_ACCESS_COOKIE = "stundenalfio_access";
 
-export function getSitePassword() {
-  return process.env.SITE_PASSWORD ?? "Passwort";
-}
-
 export function isSitePasswordValid(password: string) {
   return password === getSitePassword();
-}
-
-export function getStundenFormPassword() {
-  return process.env.STUNDEN_FORM_PASSWORD ?? "Passwort2";
 }
 
 export function isStundenFormPasswordValid(password: string) {

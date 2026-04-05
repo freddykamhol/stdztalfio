@@ -31,7 +31,7 @@ export default async function NeueStundenPage({ searchParams }: NeueStundenPageP
   const resolvedSearchParams = await searchParams;
   const token = leseToken(resolvedSearchParams.token);
 
-  if (!isStundenFormLinkTokenValid(token)) {
+  if (!token || !isStundenFormLinkTokenValid(token)) {
     notFound();
   }
 

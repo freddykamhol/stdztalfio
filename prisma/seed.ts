@@ -1,11 +1,15 @@
-import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, TimeEntryStatus } from "@prisma/client";
 import { Pool } from "pg";
+import nextEnv from "@next/env";
+
+const { loadEnvConfig } = nextEnv;
+
+loadEnvConfig(process.cwd());
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL fehlt. Prüfe "./.env" im Projektroot.');
+  throw new Error('DATABASE_URL fehlt. Lege sie in "./.env" oder in der Server-Umgebung an.');
 }
 
 const pool = new Pool({ connectionString: databaseUrl });
