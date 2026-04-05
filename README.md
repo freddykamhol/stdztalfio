@@ -5,7 +5,7 @@ Starter-Projekt mit demselben technischen Stack wie `ssdalarm`:
 - Next.js 16 mit App Router
 - React 19 und TypeScript
 - Tailwind CSS 4
-- Prisma mit PostgreSQL
+- Prisma mit SQLite
 - `next-themes`, `lucide-react` und `framer-motion`
 
 ## Schnellstart
@@ -21,18 +21,19 @@ npm run dev
 Lege vor dem Start eine `.env` mit diesen Werten an:
 
 ```bash
-DATABASE_URL="postgresql://USER:PASSWORT@HOST:5432/stundenalfio?schema=public"
+DATABASE_URL="file:./data/stundenalfio.db"
 SITE_PASSWORD="ein-langes-seiten-passwort"
 STUNDEN_FORM_PASSWORD="ein-langes-formular-passwort"
 STUNDEN_FORM_LINK_TOKEN="eine-lange-zufaellige-token-kette"
 ```
 
-Für Production sind alle vier Werte Pflicht.
+`DATABASE_URL` ist optional. Wenn du nichts setzt, nutzt die App automatisch `file:./data/stundenalfio.db` und legt die SQLite-Datei unter `prisma/data/stundenalfio.db` an.
 
-Wenn du lokal eine Datenbank laufen hast, kannst du danach die erste Migration anlegen:
+Danach kannst du die Datenbank-Datei vorbereiten und die Migrationen anwenden:
 
 ```bash
-npm run db:migrate -- --name init
+npm run prepare:sqlite
+npm run db:migrate
 npm run db:seed
 ```
 
@@ -41,7 +42,7 @@ npm run db:seed
 Empfohlene Runtime:
 
 - Node `20.20.2`
-- PostgreSQL mit gesetzter `DATABASE_URL`
+- beschreibbarer Projektordner für `prisma/data/stundenalfio.db`
 
 Der Produktionsablauf ist jetzt:
 
@@ -51,7 +52,7 @@ npm run build
 npm start
 ```
 
-`npm start` validiert die Runtime-Umgebung und führt vor dem Serverstart automatisch `prisma migrate deploy` aus.
+`npm start` bereitet den SQLite-Ordner vor, validiert die Runtime-Umgebung und führt vor dem Serverstart automatisch `prisma migrate deploy` aus.
 
 Wenn du alles in einem Schritt vorbereiten und starten willst:
 
@@ -59,7 +60,7 @@ Wenn du alles in einem Schritt vorbereiten und starten willst:
 npm run launch:production
 ```
 
-Der Healthcheck unter `/api/health` prüft jetzt nicht nur die Konfiguration, sondern auch die echte Datenbankverbindung und liefert bei Problemen HTTP `503`.
+Der Healthcheck unter `/api/health` prüft jetzt nicht nur die Konfiguration, sondern auch den echten Zugriff auf die SQLite-Datenbank und liefert bei Problemen HTTP `503`.
 
 ## Enthalten
 

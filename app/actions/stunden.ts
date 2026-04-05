@@ -25,14 +25,18 @@ const ERLAUBTE_BILD_NOTIZ_TYPEN = new Map([
 
 type ParsedStundeEingaben = {
   baustellen: string;
-  beginn: Date;
+  beginn: string;
   datum: Date;
-  ende: Date;
+  ende: string;
   pauseDauer: number;
-  stundenGes: string;
-  tankKosten: string;
+  stundenGes: number;
+  tankKosten: number;
   uebernachtung: boolean;
 };
+
+function zweiStellig(zahl: number) {
+  return String(zahl).padStart(2, "0");
+}
 
 function leseText(formData: FormData, feld: string) {
   const wert = formData.get(feld);
@@ -64,7 +68,7 @@ function parseUhrzeit(uhrzeit: string) {
   }
 
   return {
-    datum: new Date(Date.UTC(1970, 0, 1, stunden, minuten, 0)),
+    text: `${zweiStellig(stunden)}:${zweiStellig(minuten)}`,
     minutenSeitMitternacht: stunden * 60 + minuten,
   };
 }
@@ -167,16 +171,20 @@ function parseStundenEingaben(formData: FormData) {
   return {
     data: {
       baustellen,
-      beginn: beginn.datum,
+      beginn: beginn.text,
       datum,
-      ende: ende.datum,
+      ende: ende.text,
       pauseDauer,
-      stundenGes: ((arbeitsMinuten - pauseDauer) / 60).toFixed(2),
-      tankKosten: tankKosten.toFixed(2),
+      stundenGes: Number(((arbeitsMinuten - pauseDauer) / 60).toFixed(2)),
+      tankKosten: Number(tankKosten.toFixed(2)),
       uebernachtung,
     },
     fehler: null as string | null,
   };
+}
+
+function formatDezimalwert(wert: number) {
+  return wert.toFixed(2).replace(".", ",");
 }
 
 async function speichereBildNotiz(datei: File) {
@@ -279,7 +287,7 @@ export async function createStunde(
 
   return {
     status: "success",
-    message: `Gespeichert. Gesamtstunden: ${parsed.data.stundenGes.replace(".", ",")} h`,
+    message: `Gespeichert. Gesamtstunden: ${formatDezimalwert(parsed.data.stundenGes)} h`,
   };
 }
 
@@ -368,7 +376,7 @@ export async function updateStunde(
 
   return {
     status: "success",
-    message: `Aktualisiert. Gesamtstunden: ${parsed.data.stundenGes.replace(".", ",")} h`,
+    message: `Aktualisiert. Gesamtstunden: ${formatDezimalwert(parsed.data.stundenGes)} h`,
   };
 }
 

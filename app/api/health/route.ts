@@ -7,14 +7,8 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const config = getRuntimeConfigurationStatus();
-  const database = config.databaseConfigured
-    ? await checkDatabaseHealth()
-    : {
-        detail: "DATABASE_URL is missing.",
-        ok: false,
-      };
+  const database = await checkDatabaseHealth();
   const ok =
-    config.databaseConfigured &&
     config.sitePasswordConfigured &&
     config.stundenFormPasswordConfigured &&
     config.stundenFormLinkTokenConfigured &&

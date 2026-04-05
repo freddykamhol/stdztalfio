@@ -4,16 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum TimeEntryStatus {
-  DRAFT
-  RUNNING
-  SUBMITTED
-  APPROVED
-  REJECTED
 }
 
 model Workspace {
@@ -57,19 +49,19 @@ model Project {
 }
 
 model TimeEntry {
-  id        String          @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectId String
-  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   date      DateTime
   minutes   Int
   note      String?
-  status    TimeEntryStatus @default(DRAFT)
+  status    String   @default("DRAFT")
   startAt   DateTime?
   endAt     DateTime?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, projectId, date])
   @@index([projectId, date])
@@ -79,14 +71,14 @@ model TimeEntry {
 
 model Stunde {
   id            String   @id @default(cuid())
-  datum         DateTime @db.Date
-  beginn        DateTime @db.Time(0)
-  ende          DateTime @db.Time(0)
+  datum         DateTime
+  beginn        String
+  ende          String
   pauseDauer    Int      @default(0)
-  stundenGes    Decimal  @db.Decimal(5, 2)
+  stundenGes    Float
   baustellen    String
   uebernachtung Boolean  @default(false)
-  tankKosten    Decimal  @default(0) @db.Decimal(10, 2)
+  tankKosten    Float    @default(0)
   bildNotizPfad String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

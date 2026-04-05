@@ -67,7 +67,11 @@ export function formatDatumInputUtc(datum: Date) {
   return `${datum.getUTCFullYear()}-${pad(datum.getUTCMonth() + 1)}-${pad(datum.getUTCDate())}`;
 }
 
-export function formatUhrzeitUtc(datum: Date) {
+export function formatUhrzeitUtc(datum: Date | string) {
+  if (typeof datum === "string") {
+    return datum.slice(0, 5);
+  }
+
   return `${pad(datum.getUTCHours())}:${pad(datum.getUTCMinutes())}`;
 }
 

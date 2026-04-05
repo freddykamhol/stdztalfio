@@ -1,20 +1,29 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, TimeEntryStatus } from "@prisma/client";
-import { Pool } from "pg";
+import path from "node:path";
+import { PrismaClient } from "@prisma/client";
 import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
+const DEFAULT_DATABASE_URL = "file:./data/stundenalfio.db";
 
-loadEnvConfig(process.cwd());
+function normalizeDatabaseUrl(databaseUrl: string) {
+  if (!databaseUrl.startsWith("file:")) {
+    return databaseUrl;
+  }
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL fehlt. Lege sie in "./.env" oder in der Server-Umgebung an.');
+  const sqlitePath = databaseUrl.slice("file:".length);
+  const resolvedPath = path.isAbsolute(sqlitePath)
+    ? sqlitePath
+    : path.resolve(process.cwd(), "prisma", sqlitePath);
+
+  return `file:${resolvedPath}`;
 }
 
-const pool = new Pool({ connectionString: databaseUrl });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+loadEnvConfig(process.cwd());
+process.env.DATABASE_URL = normalizeDatabaseUrl(
+  process.env.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL,
+);
+
+const prisma = new PrismaClient();
 
 async function main() {
   const workspace = await prisma.workspace.upsert({
@@ -73,7 +82,7 @@ async function main() {
     update: {
       minutes: 120,
       note: "Starter-Eintrag für das neue Projekt.",
-      status: TimeEntryStatus.SUBMITTED,
+      status: "SUBMITTED",
     },
     create: {
       userId: user.id,
@@ -81,18 +90,14 @@ async function main() {
       date: today,
       minutes: 120,
       note: "Starter-Eintrag für das neue Projekt.",
-      status: TimeEntryStatus.SUBMITTED,
+      status: "SUBMITTED",
     },
   });
 
   const jetzt = new Date();
-
-  // UTC-Konstruktion verhindert Datums- und Uhrzeitverschiebungen beim Schreiben in Postgres.
   const arbeitsDatum = new Date(
     Date.UTC(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate(), 0, 0, 0),
   );
-  const beginn = new Date(Date.UTC(1970, 0, 1, 7, 0, 0));
-  const ende = new Date(Date.UTC(1970, 0, 1, 16, 0, 0));
 
   await prisma.stunde.deleteMany({
     where: {
@@ -103,13 +108,13 @@ async function main() {
   await prisma.stunde.create({
     data: {
       datum: arbeitsDatum,
-      beginn,
-      ende,
+      beginn: "07:00",
+      ende: "16:00",
       pauseDauer: 30,
-      stundenGes: "8.50",
+      stundenGes: 8.5,
       baustellen: "Musterbaustelle",
       uebernachtung: false,
-      tankKosten: "42.50",
+      tankKosten: 42.5,
     },
   });
 }
@@ -117,11 +122,9 @@ async function main() {
 main()
   .then(async () => {
     await prisma.$disconnect();
-    await pool.end();
   })
   .catch(async (error) => {
     console.error(error);
     await prisma.$disconnect();
-    await pool.end();
     process.exit(1);
   });

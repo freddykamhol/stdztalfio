@@ -10,10 +10,10 @@ function getDashboardProblem(error: unknown) {
 
   if (normalizedDetail.includes("database_url")) {
     return {
-      title: "Die Übersicht ist noch nicht mit der Datenbank verbunden.",
+      title: "Die Übersicht konnte die Datenbank-Datei nicht vorbereiten.",
       description:
-        "Die Anmeldung war erfolgreich, aber der Server hat keine Datenbank-Verbindung für die Stundenzettel gefunden.",
-      hint: "Lege auf dem Server `DATABASE_URL` an und starte die Anwendung danach neu.",
+        "Die Anmeldung war erfolgreich, aber die SQLite-Konfiguration für die Stundenzettel ist unvollständig.",
+      hint: "Prüfe `DATABASE_URL` oder nutze den Standardpfad in `prisma/data/stundenalfio.db`.",
       technicalDetail,
     };
   }
@@ -34,16 +34,20 @@ function getDashboardProblem(error: unknown) {
   }
 
   if (
+    normalizedDetail.includes("unable to open database file") ||
+    normalizedDetail.includes("readonly database") ||
+    normalizedDetail.includes("permission denied") ||
+    normalizedDetail.includes("p1003") ||
     normalizedDetail.includes("p1001") ||
     normalizedDetail.includes("econnrefused") ||
     normalizedDetail.includes("can't reach database server") ||
     normalizedDetail.includes("connect")
   ) {
     return {
-      title: "Die Übersicht kann die Datenbank gerade nicht erreichen.",
+      title: "Die Übersicht kann die SQLite-Datei gerade nicht öffnen.",
       description:
-        "Die Anmeldung war erfolgreich, aber der Server bekommt im nächsten Schritt keine Verbindung zur Datenbank.",
-      hint: "Prüfe auf dem Server die Datenbank-Zugangsdaten, den Host und ob PostgreSQL erreichbar ist.",
+        "Die Anmeldung war erfolgreich, aber der Server kann im nächsten Schritt nicht auf die Datenbank-Datei zugreifen.",
+      hint: "Prüfe auf dem Server die Schreibrechte für `prisma/data` und ob `npm start` die Migrationen ausführen konnte.",
       technicalDetail,
     };
   }
@@ -52,7 +56,7 @@ function getDashboardProblem(error: unknown) {
     title: "Die Übersicht konnte gerade nicht geladen werden.",
     description:
       "Die Anmeldung war erfolgreich, aber beim Laden der gespeicherten Stunden ist serverseitig ein Fehler aufgetreten.",
-    hint: "Prüfe die Server-Logs und die Datenbank-Konfiguration, dann lade die Seite erneut.",
+    hint: "Prüfe die Server-Logs, die SQLite-Datei und die Migrationen, dann lade die Seite erneut.",
     technicalDetail,
   };
 }

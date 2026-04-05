@@ -1,11 +1,11 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { defineConfig } from "prisma/config";
 import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
 const DEFAULT_DATABASE_URL = "file:./data/stundenalfio.db";
 
-function normalizeDatabaseUrl(databaseUrl: string) {
+function normalizeDatabaseUrl(databaseUrl) {
   if (!databaseUrl.startsWith("file:")) {
     return databaseUrl;
   }
@@ -19,14 +19,18 @@ function normalizeDatabaseUrl(databaseUrl: string) {
 }
 
 loadEnvConfig(process.cwd());
-process.env.DATABASE_URL = normalizeDatabaseUrl(
+
+const databaseUrl = normalizeDatabaseUrl(
   process.env.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL,
 );
+process.env.DATABASE_URL = databaseUrl;
 
-export default defineConfig({
-  schema: "prisma/schema.prisma",
-  migrations: {
-    path: "prisma/migrations",
-    seed: "tsx prisma/seed.ts",
-  },
-});
+if (!databaseUrl.startsWith("file:")) {
+  console.log(`Skipping SQLite preparation for non-file DATABASE_URL: ${databaseUrl}`);
+  process.exit(0);
+}
+
+const sqlitePath = databaseUrl.slice("file:".length);
+await mkdir(path.dirname(sqlitePath), { recursive: true });
+
+console.log(`SQLite directory ready: ${path.dirname(sqlitePath)}`);

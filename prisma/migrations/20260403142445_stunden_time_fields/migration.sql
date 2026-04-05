@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "stunden" ALTER COLUMN "beginn" SET DATA TYPE TIME(0),
-ALTER COLUMN "ende" SET DATA TYPE TIME(0);

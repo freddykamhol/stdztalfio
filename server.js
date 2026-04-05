@@ -1,11 +1,29 @@
 import { createServer } from "node:http";
+import path from "node:path";
 import { parse } from "node:url";
 import nextEnv from "@next/env";
 import next from "next";
 
 const { loadEnvConfig } = nextEnv;
+const DEFAULT_DATABASE_URL = "file:./data/stundenalfio.db";
+
+function normalizeDatabaseUrl(databaseUrl) {
+  if (!databaseUrl.startsWith("file:")) {
+    return databaseUrl;
+  }
+
+  const sqlitePath = databaseUrl.slice("file:".length);
+  const resolvedPath = path.isAbsolute(sqlitePath)
+    ? sqlitePath
+    : path.resolve(process.cwd(), "prisma", sqlitePath);
+
+  return `file:${resolvedPath}`;
+}
 
 loadEnvConfig(process.cwd());
+process.env.DATABASE_URL = normalizeDatabaseUrl(
+  process.env.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL,
+);
 
 const dev = process.env.NODE_ENV !== "production";
 const host = process.env.HOST ?? "0.0.0.0";
@@ -27,7 +45,6 @@ function requireServerEnv(name) {
   }
 }
 
-requireServerEnv("DATABASE_URL");
 requireServerEnv("SITE_PASSWORD");
 requireServerEnv("STUNDEN_FORM_PASSWORD");
 requireServerEnv("STUNDEN_FORM_LINK_TOKEN");

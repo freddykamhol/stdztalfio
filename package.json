@@ -11,7 +11,7 @@
     "build": "next build",
     "clean:next-public": "node scripts/clear-public-next.mjs",
     "postbuild": "node scripts/copy-next-static.mjs",
-    "prestart": "npm run validate:runtime-env && npm run db:migrate:deploy",
+    "prestart": "npm run prepare:sqlite && npm run validate:runtime-env && npm run db:migrate:deploy",
     "start": "node server.js",
     "lint": "eslint",
     "db:generate": "prisma generate",
@@ -20,18 +20,17 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "npm run db:generate",
+    "prepare:sqlite": "node scripts/prepare-sqlite.mjs",
     "validate:runtime-env": "node scripts/validate-runtime-env.mjs",
-    "launch:production": "npm run validate:runtime-env && npm run db:migrate:deploy && npm run build && npm run start"
+    "launch:production": "npm run build && npm run start"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",
-    "pg": "^8.18.0",
     "prisma": "^6.19.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -40,7 +39,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^20",
-    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.24",

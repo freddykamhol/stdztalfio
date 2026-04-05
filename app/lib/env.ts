@@ -1,6 +1,8 @@
 import "server-only";
 import "./load-env";
 
+const DEFAULT_DATABASE_URL = "file:./data/stundenalfio.db";
+
 function leseEnv(name: string) {
   const value = process.env[name]?.trim();
   return value ? value : null;
@@ -23,7 +25,7 @@ export function isProductionEnvironment() {
 }
 
 export function getDatabaseUrl() {
-  return requireEnv("DATABASE_URL");
+  return leseEnv("DATABASE_URL") ?? DEFAULT_DATABASE_URL;
 }
 
 export function getSitePassword() {
@@ -39,17 +41,20 @@ export function getStundenFormLinkToken() {
 }
 
 export function getRuntimeConfigurationStatus() {
-  const databaseUrl = leseEnv("DATABASE_URL");
+  const configuredDatabaseUrl = leseEnv("DATABASE_URL");
+  const databaseUrl = configuredDatabaseUrl ?? DEFAULT_DATABASE_URL;
   const sitePassword = leseEnv("SITE_PASSWORD");
   const stundenFormPassword = leseEnv("STUNDEN_FORM_PASSWORD");
   const stundenFormLinkToken = leseEnv("STUNDEN_FORM_LINK_TOKEN");
 
   return {
     databaseConfigured: Boolean(databaseUrl),
-    databaseUrlScheme:
-      databaseUrl && (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://"))
+    databaseUrlScheme: databaseUrl.startsWith("file:")
+      ? "file"
+      : databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://")
         ? databaseUrl.split(":")[0]
         : null,
+    databaseUrlSource: configuredDatabaseUrl ? "env" : "default",
     environment: process.env.NODE_ENV ?? "development",
     sitePasswordConfigured: Boolean(sitePassword),
     stundenFormLinkTokenConfigured: Boolean(stundenFormLinkToken),
