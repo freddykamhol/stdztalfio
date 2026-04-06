@@ -72,18 +72,32 @@ model TimeEntry {
 model Stunde {
   id            String   @id @default(cuid())
   datum         DateTime
-  beginn        String
-  ende          String
+  beginn        String?
+  ende          String?
   pauseDauer    Int      @default(0)
-  stundenGes    Float
-  baustellen    String
-  uebernachtung Boolean  @default(false)
+  stundenGes    Float    @default(0)
+  bemerkung     String
+  eintragsart   String   @default("TAGESEINSATZ")
   tankKosten    Float    @default(0)
-  bildNotizPfad String?
+  bildNotizen   StundeBildNotiz[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([datum])
-  @@index([baustellen])
+  @@index([bemerkung])
   @@map("stunden")
+}
+
+model StundeBildNotiz {
+  id        String   @id @default(cuid())
+  stundeId  String
+  stunde    Stunde   @relation(fields: [stundeId], references: [id], onDelete: Cascade)
+  titel     String
+  bildPfad  String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stundeId, position])
+  @@map("stunden_bild_notizen")
 }

@@ -9,8 +9,10 @@ import {
   Ellipsis,
   Eye,
   Fuel,
+  HeartPulse,
   ImageIcon,
   MoonStar,
+  Palmtree,
   PencilLine,
   PauseCircle,
   X,
@@ -19,9 +21,16 @@ import { startTransition, type MouseEvent, useEffect, useOptimistic, useState } 
 
 import { StundeEditModal } from "./stunde-edit-modal";
 import {
+  getBildNotizLabel,
+  formatEintragsartenZusammenfassung,
   formatEuro,
   formatPause,
   formatStunden,
+  getStundenEintragTitel,
+  getStundenEintragUntertitel,
+  getStundenEintragsartLabel,
+  getStundenEintragZeitText,
+  hatStundenZeiten,
   truncateText,
   type StundenzettelEintrag,
   type StundenzettelMonat,
@@ -44,9 +53,19 @@ function berechneSummenClient(eintraege: StundenzettelEintrag[]) {
       pauseMinuten: summe.pauseMinuten + eintrag.pauseMinuten,
       stunden: summe.stunden + eintrag.stunden,
       tankKosten: summe.tankKosten + eintrag.tankKosten,
-      uebernachtungen: summe.uebernachtungen + Number(eintrag.uebernachtung),
+      uebernachtungen: summe.uebernachtungen + Number(eintrag.eintragsart === "UEBERNACHTUNG"),
+      urlaubstage: summe.urlaubstage + Number(eintrag.eintragsart === "URLAUB"),
+      kranktage: summe.kranktage + Number(eintrag.eintragsart === "KRANK"),
     }),
-    { eintraege: 0, pauseMinuten: 0, stunden: 0, tankKosten: 0, uebernachtungen: 0 },
+    {
+      eintraege: 0,
+      pauseMinuten: 0,
+      stunden: 0,
+      tankKosten: 0,
+      uebernachtungen: 0,
+      urlaubstage: 0,
+      kranktage: 0,
+    },
   );
 }
 
@@ -60,6 +79,29 @@ function findeEintrag(monate: StundenzettelMonat[], eintragId: string) {
   }
 
   return null;
+}
+
+function getEintragInfoFelder(eintrag: StundenzettelEintrag) {
+  if (hatStundenZeiten(eintrag.eintragsart)) {
+    return [
+      {
+        label: "Zeit",
+        value: getStundenEintragZeitText(eintrag.eintragsart, eintrag.beginnText, eintrag.endeText),
+      },
+      { label: "Stunden", value: formatStunden(eintrag.stunden) },
+      { label: "Pause", value: formatPause(eintrag.pauseMinuten) },
+      { label: "Tankkosten", value: formatEuro(eintrag.tankKosten) },
+    ];
+  }
+
+  return [
+    { label: "Zeit", value: "Ganztägig" },
+    {
+      label: "Bilder",
+      value:
+        eintrag.bildNotizen.length > 0 ? getBildNotizLabel(eintrag.bildNotizen.length) : "Keine",
+    },
+  ];
 }
 
 export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) {
@@ -131,6 +173,8 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
       pauseMinuten: summe.pauseMinuten + monat.summen.pauseMinuten,
       tankKosten: summe.tankKosten + monat.summen.tankKosten,
       uebernachtungen: summe.uebernachtungen + monat.summen.uebernachtungen,
+      urlaubstage: summe.urlaubstage + monat.summen.urlaubstage,
+      kranktage: summe.kranktage + monat.summen.kranktage,
     }),
     {
       monate: 0,
@@ -139,6 +183,8 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
       pauseMinuten: 0,
       tankKosten: 0,
       uebernachtungen: 0,
+      urlaubstage: 0,
+      kranktage: 0,
     },
   );
 
@@ -156,12 +202,27 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
       icon: Clock3,
     },
     {
+      label: "Urlaubstage",
+      value: `${gesamt.urlaubstage}`,
+      meta:
+        gesamt.urlaubstage > 0
+          ? `${gesamt.urlaubstage} ${gesamt.urlaubstage === 1 ? "Tag" : "Tage"} gespeichert`
+          : "Keine Urlaubstage erfasst",
+      icon: Palmtree,
+    },
+    {
+      label: "Kranktage",
+      value: `${gesamt.kranktage}`,
+      meta:
+        gesamt.kranktage > 0
+          ? `${gesamt.kranktage} ${gesamt.kranktage === 1 ? "Tag" : "Tage"} gespeichert`
+          : "Keine Kranktage erfasst",
+      icon: HeartPulse,
+    },
+    {
       label: "Tankkosten",
       value: formatEuro(gesamt.tankKosten),
-      meta:
-        gesamt.uebernachtungen > 0
-          ? `${gesamt.uebernachtungen} Übernachtungen erfasst`
-          : "Keine Übernachtungen erfasst",
+      meta: formatEintragsartenZusammenfassung(gesamt, "Keine Markierungen erfasst"),
       icon: Fuel,
     },
   ];
@@ -473,9 +534,10 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                        {monat.summen.uebernachtungen > 0
-                          ? `${monat.summen.uebernachtungen} Übernachtungen`
-                          : "Keine Übernachtung"}
+                        {formatEintragsartenZusammenfassung(
+                          monat.summen,
+                          "Keine Markierungen",
+                        )}
                       </span>
                       <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                         PDF und Datenansicht verfügbar
@@ -562,7 +624,7 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                     {aktiverMonat.monatLabel} {aktiverMonat.jahr}
                   </h3>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                    Übersicht mit Gesamtstunden, Gesamtpause, Tankkosten und allen gespeicherten
+                    Übersicht mit Summen, Urlaub- und Kranktagen sowie allen gespeicherten
                     Tagesdaten.
                   </p>
                 </div>
@@ -576,7 +638,7 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
               </div>
 
               <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                   {[
                     {
                       label: "Gesamtstunden",
@@ -592,6 +654,16 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                       label: "Gesamtpause",
                       value: formatPause(aktiverMonat.summen.pauseMinuten),
                       icon: PauseCircle,
+                    },
+                    {
+                      label: "Urlaubstage",
+                      value: `${aktiverMonat.summen.urlaubstage}`,
+                      icon: Palmtree,
+                    },
+                    {
+                      label: "Kranktage",
+                      value: `${aktiverMonat.summen.kranktage}`,
+                      icon: HeartPulse,
                     },
                   ].map((karte) => {
                     const Icon = karte.icon;
@@ -617,18 +689,22 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
 
                 <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
                   <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
-                    {aktiverMonat.summen.uebernachtungen > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <MoonStar size={16} className="text-amber-200" />
-                        {aktiverMonat.summen.uebernachtungen} Einträge mit Übernachtung im
-                        gewählten Monat.
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <MoonStar size={16} className="text-zinc-500" />
-                        Keine Übernachtung im gewählten Monat erfasst.
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <MoonStar
+                        size={16}
+                        className={
+                          aktiverMonat.summen.uebernachtungen > 0 ||
+                          aktiverMonat.summen.urlaubstage > 0 ||
+                          aktiverMonat.summen.kranktage > 0
+                            ? "text-amber-200"
+                            : "text-zinc-500"
+                        }
+                      />
+                      {formatEintragsartenZusammenfassung(
+                        aktiverMonat.summen,
+                        "Keine Markierungen im gewählten Monat erfasst.",
+                      )}
+                    </div>
                   </div>
 
                   <button
@@ -657,27 +733,33 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                             <div className="text-base font-semibold text-white">
                               {eintrag.datumText}
                             </div>
-                            {eintrag.bildNotizUrl ? (
+                            {eintrag.bildNotizen.length > 0 ? (
                               <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-100">
                                 <ImageIcon size={12} />
-                                Bild
+                                {getBildNotizLabel(eintrag.bildNotizen.length)}
                               </span>
                             ) : null}
                           </div>
-                          <div className="mt-1 text-sm text-zinc-400">{eintrag.baustelle}</div>
+                          <div className="mt-1 text-base font-medium text-zinc-100">
+                            {getStundenEintragTitel(eintrag.eintragsart, eintrag.bemerkung)}
+                          </div>
+                          {getStundenEintragUntertitel(eintrag.eintragsart, eintrag.bemerkung) ? (
+                            <div className="mt-1 text-sm text-zinc-400">
+                              {getStundenEintragUntertitel(eintrag.eintragsart, eintrag.bemerkung)}
+                            </div>
+                          ) : null}
                         </div>
                         <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] text-zinc-300">
-                          {eintrag.uebernachtung ? "Mit Übernachtung" : "Tageseinsatz"}
+                          {getStundenEintragsartLabel(eintrag.eintragsart)}
                         </span>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        {[
-                          { label: "Zeit", value: `${eintrag.beginnText} - ${eintrag.endeText}` },
-                          { label: "Stunden", value: formatStunden(eintrag.stunden) },
-                          { label: "Pause", value: formatPause(eintrag.pauseMinuten) },
-                          { label: "Tankkosten", value: formatEuro(eintrag.tankKosten) },
-                        ].map((feld) => (
+                      <div
+                        className={`mt-4 grid gap-2 ${
+                          getEintragInfoFelder(eintrag).length > 2 ? "grid-cols-2" : "grid-cols-1"
+                        }`}
+                      >
+                        {getEintragInfoFelder(eintrag).map((feld) => (
                           <div
                             key={feld.label}
                             className="rounded-2xl border border-white/10 bg-black/15 px-3 py-3"
@@ -692,7 +774,7 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                         ))}
                       </div>
 
-                      {eintrag.bildNotizUrl ? (
+                      {eintrag.bildNotizen.length > 0 ? (
                         <div className="mt-4 flex flex-wrap gap-3">
                           <button
                             type="button"
@@ -700,7 +782,7 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                             onClick={() => setAktiveBildNotizId(eintrag.id)}
                           >
                             <ImageIcon size={16} />
-                            Bild-Notiz ansehen
+                            Bilder ansehen
                           </button>
                           <button
                             type="button"
@@ -731,12 +813,12 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                       <thead>
                         <tr className="border-b border-white/10 bg-white/[0.03] text-left text-xs uppercase tracking-[0.18em] text-zinc-500">
                           <th className="px-4 py-4 font-medium">Datum</th>
-                          <th className="px-4 py-4 font-medium">Baustelle</th>
+                          <th className="px-4 py-4 font-medium">Eintrag</th>
                           <th className="px-4 py-4 font-medium">Zeit</th>
                           <th className="px-4 py-4 font-medium">Stunden</th>
                           <th className="px-4 py-4 font-medium">Pause</th>
                           <th className="px-4 py-4 font-medium">Tankkosten</th>
-                          <th className="px-4 py-4 font-medium">Bild-Notiz</th>
+                          <th className="px-4 py-4 font-medium">Bilder</th>
                           <th className="px-4 py-4 font-medium">Bearbeiten</th>
                         </tr>
                       </thead>
@@ -749,41 +831,65 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                             <td className="px-4 py-4 text-zinc-200">{eintrag.datumText}</td>
                             <td className="px-4 py-4">
                               <div className="text-zinc-100">
-                                {truncateText(eintrag.baustelle, 64)}
+                                {truncateText(
+                                  getStundenEintragTitel(eintrag.eintragsart, eintrag.bemerkung),
+                                  64,
+                                )}
                               </div>
+                              {getStundenEintragUntertitel(eintrag.eintragsart, eintrag.bemerkung) ? (
+                                <div className="mt-1 text-sm text-zinc-400">
+                                  {truncateText(
+                                    getStundenEintragUntertitel(
+                                      eintrag.eintragsart,
+                                      eintrag.bemerkung,
+                                    ) ?? "",
+                                    72,
+                                  )}
+                                </div>
+                              ) : null}
                               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.15em] text-zinc-500">
                                 <span>
-                                  {eintrag.uebernachtung ? "Mit Übernachtung" : "Tageseinsatz"}
+                                  {getStundenEintragsartLabel(eintrag.eintragsart)}
                                 </span>
-                                {eintrag.bildNotizUrl ? (
+                                {eintrag.bildNotizen.length > 0 ? (
                                   <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-1 text-[10px] font-medium tracking-[0.14em] text-sky-100">
                                     <ImageIcon size={11} />
-                                    Bild
+                                    {getBildNotizLabel(eintrag.bildNotizen.length)}
                                   </span>
                                 ) : null}
                               </div>
                             </td>
                             <td className="px-4 py-4 text-zinc-300">
-                              {eintrag.beginnText} - {eintrag.endeText}
+                              {getStundenEintragZeitText(
+                                eintrag.eintragsart,
+                                eintrag.beginnText,
+                                eintrag.endeText,
+                              )}
                             </td>
                             <td className="px-4 py-4 text-zinc-300">
-                              {formatStunden(eintrag.stunden)}
+                              {hatStundenZeiten(eintrag.eintragsart)
+                                ? formatStunden(eintrag.stunden)
+                                : "—"}
                             </td>
                             <td className="px-4 py-4 text-zinc-300">
-                              {formatPause(eintrag.pauseMinuten)}
+                              {hatStundenZeiten(eintrag.eintragsart)
+                                ? formatPause(eintrag.pauseMinuten)
+                                : "—"}
                             </td>
                             <td className="px-4 py-4 text-zinc-300">
-                              {formatEuro(eintrag.tankKosten)}
+                              {hatStundenZeiten(eintrag.eintragsart)
+                                ? formatEuro(eintrag.tankKosten)
+                                : "—"}
                             </td>
                             <td className="px-4 py-4">
-                              {eintrag.bildNotizUrl ? (
+                              {eintrag.bildNotizen.length > 0 ? (
                                 <button
                                   type="button"
                                   className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-100 transition hover:border-white/20 hover:bg-white/10"
                                   onClick={() => setAktiveBildNotizId(eintrag.id)}
                                 >
                                   <ImageIcon size={14} />
-                                  Ansehen
+                                  {getBildNotizLabel(eintrag.bildNotizen.length)}
                                 </button>
                               ) : (
                                 <span className="text-zinc-500">Keine</span>
@@ -812,7 +918,7 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
       </AnimatePresence>
 
       <AnimatePresence>
-        {aktiveBildNotiz?.bildNotizUrl ? (
+        {aktiveBildNotiz && aktiveBildNotiz.bildNotizen.length > 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -832,13 +938,26 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-400">
                     <ImageIcon size={14} />
-                    Bild-Notiz
+                    Bild-Notizen
                   </div>
                   <h3 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
-                    {aktiveBildNotiz.datumText}
+                    {aktiveBildNotiz.datumText} ·{" "}
+                    {getStundenEintragTitel(
+                      aktiveBildNotiz.eintragsart,
+                      aktiveBildNotiz.bemerkung,
+                    )}
                   </h3>
                   <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-                    {aktiveBildNotiz.baustelle}
+                    {getBildNotizLabel(aktiveBildNotiz.bildNotizen.length)}
+                    {getStundenEintragUntertitel(
+                      aktiveBildNotiz.eintragsart,
+                      aktiveBildNotiz.bemerkung,
+                    )
+                      ? ` · ${getStundenEintragUntertitel(
+                          aktiveBildNotiz.eintragsart,
+                          aktiveBildNotiz.bemerkung,
+                        )}`
+                      : ""}
                   </p>
                 </div>
 
@@ -852,23 +971,35 @@ export function StundenzettelDashboard({ monate }: StundenzettelDashboardProps) 
               </div>
 
               <div className="flex-1 overflow-auto p-3 sm:p-6">
-                <div className="relative flex min-h-[60vh] items-center justify-center overflow-hidden rounded-[28px] border border-white/10 bg-black/40">
-                  <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-white/10 bg-black/50 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white backdrop-blur">
-                    {aktiveBildNotiz.datumText}
-                  </div>
-
-                  <Image
-                    alt={`Bild-Notiz vom ${aktiveBildNotiz.datumText}`}
-                    className="object-contain"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 960px"
-                    src={aktiveBildNotiz.bildNotizUrl}
-                    unoptimized
-                  />
-
-                  <div className="pointer-events-none absolute bottom-4 right-4 z-10 text-sm font-semibold uppercase tracking-[0.22em] text-white/25">
-                    {aktiveBildNotiz.datumText}
-                  </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {aktiveBildNotiz.bildNotizen.map((bildNotiz, index) => (
+                    <div
+                      key={bildNotiz.id}
+                      className="overflow-hidden rounded-[28px] border border-white/10 bg-black/40"
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-white">{bildNotiz.titel}</div>
+                          <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+                            Bild {index + 1}
+                          </div>
+                        </div>
+                        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-zinc-300">
+                          {aktiveBildNotiz.datumText}
+                        </div>
+                      </div>
+                      <div className="relative min-h-[340px] bg-black/50">
+                        <Image
+                          alt={`${bildNotiz.titel} vom ${aktiveBildNotiz.datumText}`}
+                          className="object-contain"
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 50vw"
+                          src={bildNotiz.url}
+                          unoptimized
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>

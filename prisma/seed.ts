@@ -101,7 +101,7 @@ async function main() {
 
   await prisma.stunde.deleteMany({
     where: {
-      baustellen: "Musterbaustelle",
+      bemerkung: "Musterbaustelle",
     },
   });
 
@@ -112,8 +112,8 @@ async function main() {
       ende: "16:00",
       pauseDauer: 30,
       stundenGes: 8.5,
-      baustellen: "Musterbaustelle",
-      uebernachtung: false,
+      bemerkung: "Musterbaustelle",
+      eintragsart: "TAGESEINSATZ",
       tankKosten: 42.5,
     },
   });

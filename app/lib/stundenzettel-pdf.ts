@@ -8,9 +8,16 @@ import {
 } from "pdf-lib";
 
 import {
+  getBildNotizLabel,
+  formatEintragsartenZusammenfassung,
   formatEuro,
   formatPause,
   formatStunden,
+  getStundenEintragTitel,
+  getStundenEintragUntertitel,
+  getStundenEintragsartLabel,
+  getStundenEintragZeitText,
+  hatStundenZeiten,
   type StundenzettelEintrag,
   type StundenzettelMonat,
 } from "./stundenzettel";
@@ -38,8 +45,8 @@ type PdfFonts = {
 };
 
 const ENTRY_CARD_LAYOUT = {
-  baustelleLineHeight: 14,
-  baustelleStartOffset: 42,
+  titelLineHeight: 14,
+  titelStartOffset: 42,
   bottomPadding: 14,
   columnGap: 18,
   contentPaddingX: 16,
@@ -277,10 +284,7 @@ function drawSummary(page: PDFPage, fonts: PdfFonts, monat: StundenzettelMonat, 
       value: `${monat.summen.eintraege}`,
     },
     {
-      hint:
-        monat.summen.uebernachtungen > 0
-          ? `${monat.summen.uebernachtungen} Übernachtungen`
-          : "Keine Übernachtung",
+      hint: formatEintragsartenZusammenfassung(monat.summen, "Keine Markierung"),
       label: "Gesamtstunden",
       value: formatStunden(monat.summen.stunden),
     },
@@ -294,7 +298,18 @@ function drawSummary(page: PDFPage, fonts: PdfFonts, monat: StundenzettelMonat, 
       label: "Tankkosten",
       value: formatEuro(monat.summen.tankKosten),
     },
+    {
+      hint: "Ganztägig",
+      label: "Urlaubstage",
+      value: `${monat.summen.urlaubstage}`,
+    },
+    {
+      hint: "Ganztägig",
+      label: "Kranktage",
+      value: `${monat.summen.kranktage}`,
+    },
   ];
+  const zeilenAnzahl = Math.ceil(cards.length / 2);
 
   cards.forEach((card, index) => {
     const spalte = index % 2;
@@ -313,16 +328,18 @@ function drawSummary(page: PDFPage, fonts: PdfFonts, monat: StundenzettelMonat, 
     });
   });
 
-  return yTop - (cardHeight * 2 + gap) - 16;
+  return yTop - (cardHeight * zeilenAnzahl + gap * Math.max(0, zeilenAnzahl - 1)) - 16;
 }
 
 function drawInfoStrip(page: PDFPage, fonts: PdfFonts, monat: StundenzettelMonat, yTop: number) {
   const height = 32;
   const y = yTop - height;
   const text =
-    monat.summen.uebernachtungen > 0
-      ? `${monat.summen.uebernachtungen} Einträge mit Übernachtung in diesem Monat.`
-      : "Keine Übernachtung in diesem Monat erfasst.";
+    monat.summen.uebernachtungen > 0 ||
+    monat.summen.urlaubstage > 0 ||
+    monat.summen.kranktage > 0
+      ? `Markierungen in diesem Monat: ${formatEintragsartenZusammenfassung(monat.summen)}.`
+      : "Keine Markierungen in diesem Monat erfasst.";
 
   drawPanel(page, MARGIN_X, y, CONTENT_WIDTH, height, COLORS.accentSoft, COLORS.accent);
 
@@ -369,25 +386,33 @@ function drawMetaCell(
   });
 }
 
+function getEintragTextFuerPdf(eintrag: StundenzettelEintrag) {
+  const titel = getStundenEintragTitel(eintrag.eintragsart, eintrag.bemerkung);
+  const untertitel = getStundenEintragUntertitel(eintrag.eintragsart, eintrag.bemerkung);
+
+  return untertitel ? `${titel} · ${untertitel}` : titel;
+}
+
 function getEntryCardHeight(eintrag: StundenzettelEintrag, fonts: PdfFonts) {
-  const baustellenZeilen = wrapText(
-    eintrag.baustelle,
+  const titelZeilen = wrapText(
+    getEintragTextFuerPdf(eintrag),
     CONTENT_WIDTH - ENTRY_CARD_LAYOUT.contentPaddingX * 2,
     fonts.bold,
     12,
     3,
   );
-  const letzteBaustellenZeileOffset =
-    ENTRY_CARD_LAYOUT.baustelleStartOffset +
-    Math.max(0, baustellenZeilen.length - 1) * ENTRY_CARD_LAYOUT.baustelleLineHeight;
-  const zweiteMetaValueOffset =
-    letzteBaustellenZeileOffset +
+  const letzteTitelZeileOffset =
+    ENTRY_CARD_LAYOUT.titelStartOffset +
+    Math.max(0, titelZeilen.length - 1) * ENTRY_CARD_LAYOUT.titelLineHeight;
+  const metaZeilen = hatStundenZeiten(eintrag.eintragsart) ? 2 : 1;
+  const letzteMetaValueOffset =
+    letzteTitelZeileOffset +
     ENTRY_CARD_LAYOUT.dividerGap +
     ENTRY_CARD_LAYOUT.metaLabelGap +
-    ENTRY_CARD_LAYOUT.metaRowGap +
+    Math.max(0, metaZeilen - 1) * ENTRY_CARD_LAYOUT.metaRowGap +
     ENTRY_CARD_LAYOUT.metaValueGap;
 
-  return zweiteMetaValueOffset + ENTRY_CARD_LAYOUT.bottomPadding;
+  return letzteMetaValueOffset + ENTRY_CARD_LAYOUT.bottomPadding;
 }
 
 function drawEntryCard(
@@ -397,8 +422,8 @@ function drawEntryCard(
   yTop: number,
   index: number,
 ) {
-  const baustellenZeilen = wrapText(
-    eintrag.baustelle,
+  const titelZeilen = wrapText(
+    getEintragTextFuerPdf(eintrag),
     CONTENT_WIDTH - ENTRY_CARD_LAYOUT.contentPaddingX * 2,
     fonts.bold,
     12,
@@ -434,8 +459,8 @@ function drawEntryCard(
     y: yTop - ENTRY_CARD_LAYOUT.dateOffset,
   });
 
-  if (eintrag.uebernachtung) {
-    const badgeText = "Übernachtung";
+  if (eintrag.eintragsart !== "TAGESEINSATZ") {
+    const badgeText = getStundenEintragsartLabel(eintrag.eintragsart);
     const badgeWidth = fonts.bold.widthOfTextAtSize(badgeText, 8) + 16;
     const badgeX = MARGIN_X + CONTENT_WIDTH - ENTRY_CARD_LAYOUT.contentPaddingX - badgeWidth;
 
@@ -450,7 +475,7 @@ function drawEntryCard(
     });
   }
 
-  baustellenZeilen.forEach((zeile, zeilenIndex) => {
+  titelZeilen.forEach((zeile, zeilenIndex) => {
     page.drawText(zeile, {
       color: COLORS.text,
       font: fonts.bold,
@@ -458,15 +483,15 @@ function drawEntryCard(
       x: contentX,
       y:
         yTop -
-        ENTRY_CARD_LAYOUT.baustelleStartOffset -
-        zeilenIndex * ENTRY_CARD_LAYOUT.baustelleLineHeight,
+        ENTRY_CARD_LAYOUT.titelStartOffset -
+        zeilenIndex * ENTRY_CARD_LAYOUT.titelLineHeight,
     });
   });
 
   const dividerY =
     yTop -
-    (ENTRY_CARD_LAYOUT.baustelleStartOffset +
-      Math.max(0, baustellenZeilen.length - 1) * ENTRY_CARD_LAYOUT.baustelleLineHeight +
+    (ENTRY_CARD_LAYOUT.titelStartOffset +
+      Math.max(0, titelZeilen.length - 1) * ENTRY_CARD_LAYOUT.titelLineHeight +
       ENTRY_CARD_LAYOUT.dividerGap);
 
   page.drawLine({
@@ -480,33 +505,50 @@ function drawEntryCard(
   const leftX = contentX;
   const rightX = contentX + columnWidth + ENTRY_CARD_LAYOUT.columnGap;
 
-  drawMetaCell(page, fonts, {
-    label: "Zeit",
-    value: `${eintrag.beginnText} - ${eintrag.endeText}`,
-    x: leftX,
-    y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap,
-  });
+  if (hatStundenZeiten(eintrag.eintragsart)) {
+    drawMetaCell(page, fonts, {
+      label: "Zeit",
+      value: getStundenEintragZeitText(eintrag.eintragsart, eintrag.beginnText, eintrag.endeText),
+      x: leftX,
+      y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap,
+    });
 
-  drawMetaCell(page, fonts, {
-    label: "Stunden",
-    value: formatStunden(eintrag.stunden),
-    x: rightX,
-    y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap,
-  });
+    drawMetaCell(page, fonts, {
+      label: "Stunden",
+      value: formatStunden(eintrag.stunden),
+      x: rightX,
+      y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap,
+    });
 
-  drawMetaCell(page, fonts, {
-    label: "Pause",
-    value: formatPause(eintrag.pauseMinuten),
-    x: leftX,
-    y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap - ENTRY_CARD_LAYOUT.metaRowGap,
-  });
+    drawMetaCell(page, fonts, {
+      label: "Pause",
+      value: formatPause(eintrag.pauseMinuten),
+      x: leftX,
+      y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap - ENTRY_CARD_LAYOUT.metaRowGap,
+    });
 
-  drawMetaCell(page, fonts, {
-    label: "Tankkosten",
-    value: formatEuro(eintrag.tankKosten),
-    x: rightX,
-    y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap - ENTRY_CARD_LAYOUT.metaRowGap,
-  });
+    drawMetaCell(page, fonts, {
+      label: "Tankkosten",
+      value: formatEuro(eintrag.tankKosten),
+      x: rightX,
+      y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap - ENTRY_CARD_LAYOUT.metaRowGap,
+    });
+  } else {
+    drawMetaCell(page, fonts, {
+      label: "Zeit",
+      value: "Ganztägig",
+      x: leftX,
+      y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap,
+    });
+
+    drawMetaCell(page, fonts, {
+      label: "Bilder",
+      value:
+        eintrag.bildNotizen.length > 0 ? getBildNotizLabel(eintrag.bildNotizen.length) : "Keine",
+      x: rightX,
+      y: dividerY - ENTRY_CARD_LAYOUT.metaLabelGap,
+    });
+  }
 
   return cardBottom - 10;
 }
